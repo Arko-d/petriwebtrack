@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Data Display</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 400px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .data {
+            margin-top: 20px;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+        .data div {
+            margin-bottom: 10px;
+        }
+        .data span {
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            font-size: 18px;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Firebase Data</h1>
+        <div class="loading" id="loadingMessage">Loading data...</div>
+        <div class="data" id="dataContainer" style="display: none;">
+            <div><span>Last Update:</span> <span id="lastUpdate"></span></div>
+            <div><span>Records:</span> <span id="records"></span></div>
+        </div>
+        <div class="error" id="errorMessage" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Firebase Realtime Database URL
+        const url = "https://petrichor-382cb-default-rtdb.europe-west1.firebasedatabase.app/.json";
+
+        // Function to fetch data from Firebase and update the page
+        function fetchData() {
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    // Hide loading message and show the data
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    document.getElementById('dataContainer').style.display = 'block';
+
+                    // Update HTML with the fetched data
+                    document.getElementById('lastUpdate').textContent = data["last-update"];
+                    document.getElementById('records').textContent = data.records;
+                })
+                .catch(error => {
+                    // Show error message if data fetch fails
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    document.getElementById('errorMessage').style.display = 'block';
+                    document.getElementById('errorMessage').textContent = "Failed to fetch data. Please try again later.";
+                });
+        }
+
+        // Fetch data initially when the page loads
+        fetchData();
+
+        // Set interval to fetch data every 1 minute (60,000 milliseconds)
+        setInterval(fetchData, 60000);  // 60000 milliseconds = 1 minute
+    </script>
+</body>
+</html>
