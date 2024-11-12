@@ -23,6 +23,10 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             width: 600px;
             margin-bottom: 20px;
+            transition: background-color 0.3s ease;
+        }
+        .container.alert {
+            background-color: #ffcccc; /* Light red background for alert */
         }
         h1 {
             text-align: center;
@@ -50,8 +54,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Petrichor</h1>
+    <div class="container" id="dataContainer">
+        <h1>Firebase Data</h1>
         <div class="data"><span>Last Update:</span> <span id="lastUpdate"></span></div>
         <div class="data"><span>Records:</span> <span id="records"></span></div>
         <div class="error" id="errorMessage" style="display: none;"></div>
@@ -61,19 +65,19 @@
     </div>
 
     <script>
-        // Firebase Realtime Database URL
         const url = "https://petrichor-382cb-default-rtdb.europe-west1.firebasedatabase.app/.json";
+        const dataContainer = document.getElementById('dataContainer');
         
-        // Chart.js chart configuration
+        // Initialize or update chart
         let chart;
         function initializeChart(dataPoints) {
             const ctx = document.getElementById('dataChart').getContext('2d');
             chart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: Array.from({length: dataPoints.length}, (_, i) => i + 1), // Labels are index numbers
+                    labels: Array.from({ length: dataPoints.length }, (_, i) => i + 1),
                     datasets: [{
-                        label: 'Live Response',
+                        label: 'Data Points',
                         data: dataPoints,
                         borderColor: 'rgba(75, 192, 192, 1)',
                         backgroundColor: 'rgba(75, 192, 192, 0.2)',
@@ -84,31 +88,34 @@
                 options: {
                     responsive: true,
                     scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Index'
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Value'
-                            }
-                        }
+                        x: { title: { display: true, text: 'Index' }},
+                        y: { title: { display: true, text: 'Value' }}
                     }
                 }
             });
         }
 
-        // Function to update chart with new data
         function updateChart(dataPoints) {
-            chart.data.labels = Array.from({length: dataPoints.length}, (_, i) => i + 1); // Update labels
-            chart.data.datasets[0].data = dataPoints; // Update data points
+            chart.data.labels = Array.from({ length: dataPoints.length }, (_, i) => i + 1);
+            chart.data.datasets[0].data = dataPoints;
             chart.update();
         }
 
-        // Function to fetch data from Firebase and update the page
+        // Check the time difference
+        function checkTimeDifference(lastUpdate) {
+            const now = new Date();
+            const lastUpdateDate = new Date(lastUpdate);
+            const diffMinutes = Math.abs(now - lastUpdateDate) / (1000 * 60);
+
+            // If the difference is greater than 5 minutes, apply alert style
+            if (diffMinutes > 4) {
+                dataContainer.classList.add('alert');
+            } else {
+                dataContainer.classList.remove('alert');
+            }
+        }
+
+        // Fetch data from Firebase and update the page
         function fetchData() {
             fetch(url)
                 .then(response => response.json())
@@ -116,16 +123,19 @@
                     document.getElementById('lastUpdate').textContent = data["last-update"];
                     document.getElementById('records').textContent = data.records;
 
-                    // Extract the "line" values (split by comma and ignore the first item, which is the timestamp)
-                    const lineData = data.line.split(",").slice(1, -1); // Ignore first (timestamp) and last (non-numeric) items
-                    const dataPoints = lineData.map(Number); // Convert to array of numbers
+                    // Parse the line data
+                    const lineData = data.line.split(",").slice(1, -1);
+                    const dataPoints = lineData.map(Number);
 
-                    // Initialize or update the chart
+                    // Initialize or update chart
                     if (chart) {
                         updateChart(dataPoints);
                     } else {
                         initializeChart(dataPoints);
                     }
+
+                    // Check time difference and update the card color
+                    checkTimeDifference(data["last-update"]);
                 })
                 .catch(error => {
                     document.getElementById('errorMessage').style.display = 'block';
@@ -133,10 +143,7 @@
                 });
         }
 
-        // Fetch data initially when the page loads
         fetchData();
-
-        // Set interval to fetch data every 1 minute (60000 milliseconds)
         setInterval(fetchData, 60000);
     </script>
 </body>
