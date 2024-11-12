@@ -14,70 +14,120 @@
             align-items: center;
             height: 100vh;
             background-color: #f4f4f4;
+            flex-direction: column;
         }
         .container {
             background-color: #fff;
             border-radius: 8px;
             padding: 20px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 400px;
+            width: 600px;
+            margin-bottom: 20px;
         }
         h1 {
             text-align: center;
             color: #333;
         }
         .data {
-            margin-top: 20px;
             font-size: 18px;
             line-height: 1.6;
-        }
-        .data div {
             margin-bottom: 10px;
         }
         .data span {
             font-weight: bold;
         }
-        .loading {
-            text-align: center;
-            font-size: 18px;
-        }
         .error {
             color: red;
             font-weight: bold;
+            text-align: center;
+        }
+        #chartContainer {
+            width: 100%;
+            max-width: 600px;
         }
     </style>
+    <!-- Include Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>Firebase Data</h1>
-        <div class="loading" id="loadingMessage">Loading data...</div>
-        <div class="data" id="dataContainer" style="display: none;">
-            <div><span>Last Update:</span> <span id="lastUpdate"></span></div>
-            <div><span>Records:</span> <span id="records"></span></div>
-        </div>
+        <h1>Petrichor</h1>
+        <div class="data"><span>Last Update:</span> <span id="lastUpdate"></span></div>
+        <div class="data"><span>Records:</span> <span id="records"></span></div>
         <div class="error" id="errorMessage" style="display: none;"></div>
+    </div>
+    <div id="chartContainer">
+        <canvas id="dataChart"></canvas>
     </div>
 
     <script>
         // Firebase Realtime Database URL
         const url = "https://petrichor-382cb-default-rtdb.europe-west1.firebasedatabase.app/.json";
+        
+        // Chart.js chart configuration
+        let chart;
+        function initializeChart(dataPoints) {
+            const ctx = document.getElementById('dataChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array.from({length: dataPoints.length}, (_, i) => i + 1), // Labels are index numbers
+                    datasets: [{
+                        label: 'Live Response',
+                        data: dataPoints,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Index'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Value'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Function to update chart with new data
+        function updateChart(dataPoints) {
+            chart.data.labels = Array.from({length: dataPoints.length}, (_, i) => i + 1); // Update labels
+            chart.data.datasets[0].data = dataPoints; // Update data points
+            chart.update();
+        }
 
         // Function to fetch data from Firebase and update the page
         function fetchData() {
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
-                    // Hide loading message and show the data
-                    document.getElementById('loadingMessage').style.display = 'none';
-                    document.getElementById('dataContainer').style.display = 'block';
-
-                    // Update HTML with the fetched data
                     document.getElementById('lastUpdate').textContent = data["last-update"];
                     document.getElementById('records').textContent = data.records;
+
+                    // Extract the "line" values (split by comma and ignore the first item, which is the timestamp)
+                    const lineData = data.line.split(",").slice(1, -1); // Ignore first (timestamp) and last (non-numeric) items
+                    const dataPoints = lineData.map(Number); // Convert to array of numbers
+
+                    // Initialize or update the chart
+                    if (chart) {
+                        updateChart(dataPoints);
+                    } else {
+                        initializeChart(dataPoints);
+                    }
                 })
                 .catch(error => {
-                    // Show error message if data fetch fails
-                    document.getElementById('loadingMessage').style.display = 'none';
                     document.getElementById('errorMessage').style.display = 'block';
                     document.getElementById('errorMessage').textContent = "Failed to fetch data. Please try again later.";
                 });
@@ -86,8 +136,8 @@
         // Fetch data initially when the page loads
         fetchData();
 
-        // Set interval to fetch data every 1 minute (60,000 milliseconds)
-        setInterval(fetchData, 60000);  // 60000 milliseconds = 1 minute
+        // Set interval to fetch data every 1 minute (60000 milliseconds)
+        setInterval(fetchData, 60000);
     </script>
 </body>
 </html>
